@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RiskLens — Portfolio Risk & Stress Testing Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+    :root {
+      --bg-base:        #080c14;
+      --bg-surface:     #0d1220;
+      --bg-card:        #111827;
+      --bg-glass:       rgba(17, 24, 39, 0.7);
+      --border:         rgba(255,255,255,0.07);
+      --border-bright:  rgba(255,255,255,0.14);
+      --accent-blue:    #3b82f6;
+      --accent-cyan:    #06b6d4;
+      --accent-green:   #10b981;
+      --accent-amber:   #f59e0b;
+      --text-primary:   #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted:     #475569;
+      --gradient-hero:  linear-gradient(135deg, #0f1f45 0%, #080c14 40%, #041020 100%);
+      --gradient-accent:linear-gradient(135deg, #3b82f6, #06b6d4);
+      --glow-blue:      0 0 40px rgba(59,130,246,0.18);
+      --glow-cyan:      0 0 40px rgba(6,182,212,0.18);
+      --radius-lg:      16px;
+      --radius-xl:      24px;
+      --font-sans:      'DM Sans', sans-serif;
+      --font-mono:      'DM Mono', monospace;
+    }
+ 
+    html { scroll-behavior: smooth; }
+ 
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+ 
+    /* ─── NOISE OVERLAY ─────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+    }
+ 
+    /* ─── AMBIENT ORBS ──────────────────────────────────── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+    .orb-1 { width: 560px; height: 560px; background: rgba(59,130,246,0.1); top: -140px; left: -140px; animation-duration: 20s; }
+    .orb-2 { width: 420px; height: 420px; background: rgba(6,182,212,0.08); top: 40%; right: -100px; animation-duration: 25s; animation-delay: -8s; }
+    .orb-3 { width: 300px; height: 300px; background: rgba(16,185,129,0.06); bottom: 10%; left: 30%; animation-duration: 22s; animation-delay: -4s; }
+ 
+    @keyframes drift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(40px, 30px) scale(1.08); }
+    }
+ 
+    /* ─── NAVBAR ────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(20px, 5vw, 64px);
+      height: 64px;
+      background: rgba(8, 12, 20, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+ 
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+    .nav-logo-icon {
+      width: 32px; height: 32px;
+      background: var(--gradient-accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+ 
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+ 
+    .nav-cta {
+      background: var(--gradient-accent);
+      color: #fff !important;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 600 !important;
+      font-size: 0.85rem !important;
+      transition: opacity 0.2s, transform 0.2s !important;
+    }
+    .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); color: #fff !important; }
+ 
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+    }
+ 
+    /* ─── HERO ──────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: clamp(72px, 12vw, 128px) clamp(20px, 5vw, 64px) clamp(64px, 10vw, 112px);
+      background: var(--gradient-hero);
+    }
+ 
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: #93c5fd;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 28px;
+      animation: fadeUp 0.7s ease both;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      background: #3b82f6;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #3b82f6;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.5; transform: scale(0.8); }
+    }
+ 
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1.0;
+      background: linear-gradient(135deg, #f1f5f9 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+      animation: fadeUp 0.7s 0.1s ease both;
+    }
+    .hero h1 span {
+      background: var(--gradient-accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+ 
+    .hero-subtitle {
+      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+      font-weight: 400;
+      color: var(--text-secondary);
+      letter-spacing: -0.01em;
+      margin-bottom: 20px;
+      animation: fadeUp 0.7s 0.2s ease both;
+    }
+ 
+    .hero-desc {
+      max-width: 620px;
+      margin: 0 auto 40px;
+      font-size: clamp(0.95rem, 1.8vw, 1.05rem);
+      color: var(--text-muted);
+      line-height: 1.75;
+      animation: fadeUp 0.7s 0.3s ease both;
+    }
+ 
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      animation: fadeUp 0.7s 0.4s ease both;
+    }
+ 
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: var(--gradient-accent);
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+      box-shadow: 0 4px 24px rgba(59,130,246,0.35);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(59,130,246,0.45); }
+    .btn-primary svg { width: 18px; height: 18px; }
+ 
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      font-weight: 500;
+      border: 1px solid var(--border-bright);
+      border-radius: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s, transform 0.2s;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.3); color: var(--text-primary); transform: translateY(-2px); }
+ 
+    .hero-stats {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(24px, 5vw, 56px);
+      margin-top: 64px;
+      flex-wrap: wrap;
+      animation: fadeUp 0.7s 0.5s ease both;
+    }
+    .hero-stat-item { text-align: center; }
+    .hero-stat-number {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      background: var(--gradient-accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-stat-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .hero-stat-divider {
+      width: 1px; height: 36px;
+      background: var(--border-bright);
+    }
+ 
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+ 
+    /* ─── SECTION WRAPPER ───────────────────────────────── */
+    section {
+      position: relative;
+      z-index: 1;
+    }
+    .section-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 clamp(20px, 5vw, 64px);
+    }
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+    }
+    .section-sub {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+ 
+    /* ─── FEATURE CARDS ─────────────────────────────────── */
+    .features {
+      padding: clamp(72px, 10vw, 112px) 0;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .features-header {
+      margin-bottom: 52px;
+    }
+ 
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+ 
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+      cursor: default;
+    }
+    .feature-card:hover {
+      border-color: var(--border-bright);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+ 
+    .card-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .card-icon svg { width: 22px; height: 22px; }
+    .icon-blue  { background: rgba(59,130,246,0.12); color: #3b82f6; }
+    .icon-cyan  { background: rgba(6,182,212,0.12);  color: #06b6d4; }
+    .icon-green { background: rgba(16,185,129,0.12); color: #10b981; }
+    .icon-amber { background: rgba(245,158,11,0.12); color: #f59e0b; }
+ 
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+    .card-desc {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 100px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .tag-blue  { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.25); color: #93c5fd; }
+    .tag-cyan  { background: rgba(6,182,212,0.1);  border-color: rgba(6,182,212,0.25);  color: #67e8f9; }
+    .tag-green { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: #6ee7b7; }
+    .tag-amber { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.25); color: #fcd34d; }
+ 
+    /* ─── UPLOAD SECTION ────────────────────────────────── */
+    .upload-section {
+      padding: clamp(72px, 10vw, 112px) 0;
+    }
+    .upload-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .upload-layout { grid-template-columns: 1fr; gap: 48px; }
+    }
+ 
+    .upload-info h2 {
+      font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+    .upload-info p {
+      color: var(--text-secondary);
+      font-size: 0.975rem;
+      line-height: 1.75;
+      margin-bottom: 32px;
+    }
+ 
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .step-num {
+      min-width: 28px; height: 28px;
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #3b82f6;
+      margin-top: 1px;
+    }
+    .step-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .step-text strong { color: var(--text-primary); font-weight: 600; }
+ 
+    /* ─── UPLOAD CARD / GLASS ───────────────────────────── */
+    .upload-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+      box-shadow: var(--glow-blue), 0 24px 64px rgba(0,0,0,0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gradient-accent);
+    }
+ 
+    .upload-card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+    .upload-card-sub {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+ 
+    .drop-zone {
+      border: 2px dashed var(--border-bright);
+      border-radius: var(--radius-lg);
+      padding: 44px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: rgba(59,130,246,0.6);
+      background: rgba(59,130,246,0.05);
+      transform: scale(1.005);
+    }
+    .drop-zone.drag-over {
+      border-color: #3b82f6;
+      background: rgba(59,130,246,0.09);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+    }
+    .drop-zone.has-file {
+      border-color: rgba(16,185,129,0.5);
+      background: rgba(16,185,129,0.05);
+    }
+ 
+    .drop-icon {
+      width: 52px; height: 52px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      transition: background 0.2s;
+    }
+    .drop-zone.drag-over .drop-icon { background: rgba(59,130,246,0.2); }
+    .drop-zone.has-file .drop-icon  { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); }
+    .drop-icon svg { width: 24px; height: 24px; color: #3b82f6; transition: color 0.2s; }
+    .drop-zone.has-file .drop-icon svg { color: #10b981; }
+ 
+    .drop-primary {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .drop-secondary {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+ 
+    .file-name-display {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 8px 14px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #6ee7b7;
+    }
+    .file-name-display.visible { display: flex; }
+    .file-name-display svg { width: 14px; height: 14px; flex-shrink: 0; }
+ 
+    .btn-file-pick {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .btn-file-pick:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.25);
+      color: var(--text-primary);
+    }
+    .btn-file-pick svg { width: 15px; height: 15px; }
+ 
+    /* Hidden real file input */
+    #file-input { display: none; }
+ 
+    .upload-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 22px 0;
+    }
+    .upload-divider-line { flex: 1; height: 1px; background: var(--border); }
+    .upload-divider-text { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.04em; }
+ 
+    .btn-upload {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px;
+      background: var(--gradient-accent);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+      box-shadow: 0 4px 24px rgba(59,130,246,0.35);
+      letter-spacing: -0.01em;
+    }
+    .btn-upload:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(59,130,246,0.5); }
+    .btn-upload:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-upload svg { width: 18px; height: 18px; }
+ 
+    .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+ 
+    .upload-note {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .upload-note svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--text-muted); }
+ 
+    /* ─── FORMATS SECTION ───────────────────────────────── */
+    .formats-section {
+      padding: clamp(56px, 8vw, 88px) 0;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+    }
+    .formats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 40px;
+    }
+    @media (max-width: 640px) { .formats-grid { grid-template-columns: 1fr; } }
+ 
+    .format-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+    .format-block-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      margin-bottom: 14px;
+    }
+    .csv-code {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+    .csv-code .csv-header { color: #93c5fd; font-weight: 500; }
+    .csv-code .csv-row    { color: var(--text-muted); }
+    .csv-code .csv-sep    { display: block; margin: 8px 0; border-top: 1px solid var(--border); padding-top: 8px; }
+ 
+    .brokers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .broker-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .broker-item:hover { border-color: var(--border-bright); background: rgba(255,255,255,0.05); }
+    .broker-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-blue  { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
+    .dot-green { background: #10b981; box-shadow: 0 0 6px #10b981; }
+    .dot-amber { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+    .dot-cyan  { background: #06b6d4; box-shadow: 0 0 6px #06b6d4; }
+ 
+    .broker-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
+    .broker-tag  { margin-left: auto; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); }
+ 
+    /* ─── FOOTER ────────────────────────────────────────── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 40px clamp(20px, 5vw, 64px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+      background: var(--bg-base);
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    .footer-brand-icon {
+      width: 28px; height: 28px;
+      background: var(--gradient-accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .footer-brand-icon svg { width: 15px; height: 15px; fill: #fff; }
+ 
+    .footer-stack {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .stack-pill {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      color: var(--text-muted);
+    }
+    .footer-copy {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      width: 100%;
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ─── Error Message ──────────────────────────────────────────────── */
+    .flash-container{
+      max-width:800px;
+      margin:20px auto;
+      padding:0 20px;
+      position:relative;
+      z-index:1000;
+    }
+
+    .flash-error{
+      background: rgba(239,68,68,0.12);
+      border:1px solid rgba(239,68,68,0.4);
+      color:#fca5a5;
+      padding:16px 20px;
+      border-radius:12px;
+      font-weight:600;
+      text-align:center;
+      backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body>
+ 
+<!-- Ambient orbs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+ 
+<!-- ─── NAV ──────────────────────────────────────────────── -->
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 20 20"><path d="M10 2L2 7l8 5 8-5-8-5zM2 13l8 5 8-5M2 10l8 5 8-5"/></svg>
+    </div>
+    RiskLens
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#upload">Upload</a></li>
+    <li><a href="#formats">Formats</a></li>
+    <li><a href="#upload" class="nav-cta">Try Now →</a></li>
+  </ul>
+</nav>
+
+<!-- ─── Error Message ──────────────────────────────────────────────── -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="flash-container">
+      {% for message in messages %}
+        <div class="flash-error">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+ 
+<!-- ─── HERO ─────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    Institutional-grade Risk Analytics
+  </div>
+  <h1><span>RiskLens</span></h1>
+  <p class="hero-subtitle">Portfolio Risk &amp; Stress Testing Engine</p>
+  <p class="hero-desc">Upload your portfolio and instantly analyze risk exposure, Value at Risk, Monte Carlo simulations, stress scenarios, and portfolio concentration — all in one dashboard.</p>
+  <div class="hero-actions">
+    <a href="#upload" class="btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload Portfolio
+    </a>
+    <a href="#features" class="btn-ghost">
+      Explore Features
+    </a>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat-item">
+      <div class="hero-stat-number">10K+</div>
+      <div class="hero-stat-label">MC Simulations</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div class="hero-stat-item">
+      <div class="hero-stat-number">6+</div>
+      <div class="hero-stat-label">Risk Metrics</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div class="hero-stat-item">
+      <div class="hero-stat-number">3</div>
+      <div class="hero-stat-label">Stress Scenarios</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div class="hero-stat-item">
+      <div class="hero-stat-number">4+</div>
+      <div class="hero-stat-label">Broker Formats</div>
+    </div>
+  </div>
+</section>
+ 
+<!-- ─── FEATURES ──────────────────────────────────────────── -->
+<section class="features" id="features">
+  <div class="section-inner">
+    <div class="features-header">
+      <div class="section-label">Capabilities</div>
+      <h2 class="section-title">Everything your portfolio needs</h2>
+      <p class="section-sub">Powered by Python, yfinance, and Plotly — delivering institutional-grade analytics through a simple CSV upload.</p>
+    </div>
+    <div class="cards-grid">
+ 
+      <!-- Card 1 -->
+      <div class="feature-card">
+        <div class="card-icon icon-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="card-title">Portfolio Analytics</div>
+        <div class="card-desc">Comprehensive performance metrics for every holding. Understand your portfolio at a glance with risk-adjusted return analysis.</div>
+        <div class="card-tags">
+          <span class="tag tag-blue">Returns</span>
+          <span class="tag tag-blue">Volatility</span>
+          <span class="tag tag-blue">Sharpe Ratio</span>
+          <span class="tag tag-blue">Beta</span>
+        </div>
+      </div>
+ 
+      <!-- Card 2 -->
+      <div class="feature-card">
+        <div class="card-icon icon-cyan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="card-title">Risk Engine</div>
+        <div class="card-desc">Statistical downside risk modelling using parametric and historical methods to quantify potential portfolio losses.</div>
+        <div class="card-tags">
+          <span class="tag tag-cyan">VaR</span>
+          <span class="tag tag-cyan">CVaR</span>
+          <span class="tag tag-cyan">Max Drawdown</span>
+          <span class="tag tag-cyan">Sortino</span>
+        </div>
+      </div>
+ 
+      <!-- Card 3 -->
+      <div class="feature-card">
+        <div class="card-icon icon-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="card-title">Monte Carlo Simulation</div>
+        <div class="card-desc">Run 10,000 stochastic simulations of future portfolio paths to visualise the full distribution of potential outcomes.</div>
+        <div class="card-tags">
+          <span class="tag tag-green">10,000 Paths</span>
+          <span class="tag tag-green">Confidence Bands</span>
+          <span class="tag tag-green">GBM Model</span>
+        </div>
+      </div>
+ 
+      <!-- Card 4 -->
+      <div class="feature-card">
+        <div class="card-icon icon-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="card-title">Stress Testing</div>
+        <div class="card-desc">Replay historical crises and custom shock scenarios against your current portfolio to assess resilience under extreme conditions.</div>
+        <div class="card-tags">
+          <span class="tag tag-amber">2008 GFC</span>
+          <span class="tag tag-amber">COVID Crash</span>
+          <span class="tag tag-amber">Custom Shocks</span>
+        </div>
+      </div>
+ 
+    </div>
+  </div>
+</section>
+ 
+<!-- ─── UPLOAD ────────────────────────────────────────────── -->
+<section class="upload-section" id="upload">
+  <div class="section-inner">
+    <div class="upload-layout">
+ 
+      <!-- Info side -->
+      <div class="upload-info">
+        <div class="section-label">Get Started</div>
+        <h2>Upload your portfolio<br/>in seconds</h2>
+        <p>Simply export your holdings as a CSV from any broker, upload it below, and receive a comprehensive risk dashboard — no sign-up required.</p>
+        <div class="step-list">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-text"><strong>Export your holdings</strong> as a CSV from your broker (Zerodha, Groww, Robinhood, IBKR, or manual).</div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-text"><strong>Upload the file</strong> below — our engine validates your format automatically.</div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-text"><strong>Receive your dashboard</strong> with full risk analytics, charts, and stress test results.</div>
+          </div>
+        </div>
+      </div>
+ 
+      <!-- Upload card -->
+      <div class="upload-card">
+        <div class="upload-card-title">Analyse Portfolio</div>
+        <div class="upload-card-sub">Supports CSV files up to 10 MB · Processing under 30 seconds</div>
+ 
+        <form action="/upload" method="POST" enctype="multipart/form-data" id="upload-form">
+          <!-- Hidden real file input preserving Flask compatibility -->
+          <input type="file" name="file" id="file-input" accept=".csv" />
+ 
+          <!-- Drag-and-drop zone -->
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+            <div class="drop-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="drop-primary" id="drop-primary">Drag &amp; drop your CSV here</div>
+            <div class="drop-secondary">or click to browse your files</div>
+ 
+            <div class="file-name-display" id="file-name-display">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span id="file-name-text">portfolio.csv</span>
+            </div>
+ 
+            <button type="button" class="btn-file-pick" onclick="event.stopPropagation(); document.getElementById('file-input').click()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Choose File
+            </button>
+          </div>
+ 
+          <div class="upload-divider">
+            <div class="upload-divider-line"></div>
+            <div class="upload-divider-text">READY TO ANALYSE</div>
+            <div class="upload-divider-line"></div>
+          </div>
+ 
+          <button type="submit" class="btn-upload" id="upload-btn" disabled>
+            <svg id="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            <div class="spinner" id="spinner"></div>
+            <span id="btn-label">Run Risk Analysis</span>
+          </button>
+        </form>
+ 
+        <div class="upload-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Your data is processed locally and never stored permanently.
+        </div>
+      </div>
+ 
+    </div>
+  </div>
+</section>
+ 
+<!-- ─── FORMATS ───────────────────────────────────────────── -->
+<section class="formats-section" id="formats">
+  <div class="section-inner">
+    <div class="section-label">Compatibility</div>
+    <h2 class="section-title">Supported formats</h2>
+    <p class="section-sub">Works with any standard broker CSV export or a manually prepared file with ticker and weight data.</p>
+ 
+    <div class="formats-grid">
+      <!-- CSV examples -->
+      <div class="format-block">
+        <div class="format-block-title">CSV Schemas</div>
+        <div class="csv-code">
+          <span class="csv-header">Ticker,Weight</span><br/>
+          <span class="csv-row">AAPL,0.25</span><br/>
+          <span class="csv-row">MSFT,0.20</span><br/>
+          <span class="csv-row">GOOGL,0.15</span>
+ 
+          <span class="csv-sep"></span>
+ 
+          <span class="csv-header">Ticker,Shares</span><br/>
+          <span class="csv-row">RELIANCE.NS,50</span><br/>
+          <span class="csv-row">TCS.NS,30</span>
+ 
+          <span class="csv-sep"></span>
+ 
+          <span class="csv-header">Ticker,Shares,Avg_Cost,Sector</span><br/>
+          <span class="csv-row">INFY.NS,100,1450.00,Technology</span><br/>
+          <span class="csv-row">HDFCBANK.NS,80,1600.00,Finance</span>
+        </div>
+      </div>
+ 
+      <!-- Broker support -->
+      <div class="format-block">
+        <div class="format-block-title">Supported Brokers</div>
+        <div class="brokers-list">
+          <div class="broker-item">
+            <div class="broker-dot dot-blue"></div>
+            <div class="broker-name">Zerodha</div>
+            <div class="broker-tag">Console Export</div>
+          </div>
+          <div class="broker-item">
+            <div class="broker-dot dot-green"></div>
+            <div class="broker-name">Groww</div>
+            <div class="broker-tag">Portfolio CSV</div>
+          </div>
+          <div class="broker-item">
+            <div class="broker-dot dot-amber"></div>
+            <div class="broker-name">Robinhood</div>
+            <div class="broker-tag">Account CSV</div>
+          </div>
+          <div class="broker-item">
+            <div class="broker-dot dot-cyan"></div>
+            <div class="broker-name">Interactive Brokers</div>
+            <div class="broker-tag">Flex Query</div>
+          </div>
+          <div class="broker-item">
+            <div class="broker-dot" style="background:#94a3b8;box-shadow:0 0 6px #94a3b8;"></div>
+            <div class="broker-name">Manual CSV</div>
+            <div class="broker-tag">Any Schema Above</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+ 
+<!-- ─── FOOTER ────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-brand">
+    <div class="footer-brand-icon">
+      <svg viewBox="0 0 20 20"><path d="M10 2L2 7l8 5 8-5-8-5zM2 13l8 5 8-5M2 10l8 5 8-5"/></svg>
+    </div>
+    RiskLens
+  </div>
+  <div class="footer-stack">
+    <span class="stack-pill">Flask</span>
+    <span class="stack-pill">Python</span>
+    <span class="stack-pill">yfinance</span>
+    <span class="stack-pill">Plotly</span>
+    <span class="stack-pill">NumPy</span>
+    <span class="stack-pill">Pandas</span>
+  </div>
+  <div class="footer-copy">© 2025 RiskLens · Portfolio Risk &amp; Stress Testing Engine · Built for investors, by engineers.</div>
+</footer>
+ 
+<!-- ─── JS ────────────────────────────────────────────────── -->
+<script>
+  const fileInput   = document.getElementById('file-input');
+  const dropZone    = document.getElementById('drop-zone');
+  const fileDisplay = document.getElementById('file-name-display');
+  const fileText    = document.getElementById('file-name-text');
+  const dropPrimary = document.getElementById('drop-primary');
+  const uploadBtn   = document.getElementById('upload-btn');
+  const btnLabel    = document.getElementById('btn-label');
+  const btnIcon     = document.getElementById('btn-icon');
+  const spinner     = document.getElementById('spinner');
+  const uploadForm  = document.getElementById('upload-form');
+ 
+  function setFile(file) {
+    if (!file) return;
+    fileText.textContent = file.name;
+    fileDisplay.classList.add('visible');
+    dropPrimary.textContent = 'File ready to analyse';
+    dropZone.classList.add('has-file');
+    uploadBtn.disabled = false;
+  }
+ 
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) setFile(fileInput.files[0]);
+  });
+ 
+  // Drag & drop
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', e => {
+    if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over');
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      // Transfer to real input
+      const dt = new DataTransfer();
+      dt.items.add(files[0]);
+      fileInput.files = dt.files;
+      setFile(files[0]);
+    }
+  });
+ 
+  // Loading state on submit
+  uploadForm.addEventListener('submit', () => {
+    btnIcon.style.display  = 'none';
+    spinner.style.display  = 'block';
+    btnLabel.textContent   = 'Analysing…';
+    uploadBtn.disabled     = true;
+  });
+</script>
+</body>
+</html>

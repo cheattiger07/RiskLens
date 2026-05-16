@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RiskLens — Portfolio Risk Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+    :root {
+      --bg-base:       #090d12;
+      --bg-surface:    #0e1520;
+      --bg-card:       #111926;
+      --bg-card-hover: #152030;
+      --bg-raised:     #1a2636;
+      --border:        rgba(255,255,255,0.06);
+      --border-bright: rgba(255,255,255,0.12);
+ 
+      --accent-cyan:   #00e5ff;
+      --accent-blue:   #3b82f6;
+      --accent-green:  #10d48e;
+      --accent-yellow: #f5c542;
+      --accent-red:    #f04747;
+      --accent-orange: #ff8c42;
+ 
+      --text-primary:  #e8f0f8;
+      --text-secondary:#7a93b0;
+      --text-muted:    #4a6070;
+ 
+      --font-display:  'Syne', sans-serif;
+      --font-body:     'DM Sans', sans-serif;
+      --font-mono:     'DM Mono', monospace;
+ 
+      --radius-sm:  6px;
+      --radius-md:  12px;
+      --radius-lg:  18px;
+      --radius-xl:  24px;
+ 
+      --shadow-card:  0 2px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+      --shadow-glow:  0 0 30px rgba(0,229,255,0.08);
+      --transition:   all 0.22s cubic-bezier(0.4,0,0.2,1);
+    }
+ 
+    html { scroll-behavior: smooth; }
+ 
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+ 
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.4;
+    }
+ 
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(9,13,18,0.88);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+ 
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+    }
+ 
+    .nav-logo-mark {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: #000;
+      font-family: var(--font-display);
+      letter-spacing: -0.5px;
+    }
+ 
+    .nav-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: -0.3px;
+      color: var(--text-primary);
+    }
+ 
+    .nav-title span { color: var(--accent-cyan); }
+ 
+    .nav-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 3px 8px;
+      background: rgba(0,229,255,0.08);
+      border: 1px solid rgba(0,229,255,0.2);
+      border-radius: 20px;
+      color: var(--accent-cyan);
+      letter-spacing: 0.5px;
+    }
+ 
+    .nav-right {
+      display: flex; align-items: center; gap: 16px;
+    }
+ 
+    .btn-back {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+ 
+    .btn-back:hover {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-primary);
+      border-color: var(--border-bright);
+    }
+ 
+    .btn-back svg { width: 14px; height: 14px; }
+ 
+    .btn-download {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 20px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      text-decoration: none;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+      box-shadow: 0 0 20px rgba(0,229,255,0.25), 0 2px 8px rgba(0,0,0,0.3);
+    }
+ 
+    .btn-download::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.2s;
+    }
+ 
+    .btn-download:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 32px rgba(0,229,255,0.4), 0 4px 16px rgba(0,0,0,0.4);
+    }
+ 
+    .btn-download:hover::before { background: rgba(255,255,255,0.1); }
+ 
+    .btn-download:active { transform: translateY(0); }
+ 
+    .btn-download svg { width: 14px; height: 14px; flex-shrink: 0; }
+ 
+    /* ── LAYOUT ── */
+    .page-wrapper {
+      position: relative; z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 40px 32px 80px;
+    }
+ 
+    /* ── PAGE HEADER ── */
+    .page-header {
+      margin-bottom: 36px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+      flex-wrap: wrap;
+    }
+ 
+    .page-header-left h1 {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      color: var(--text-primary);
+    }
+ 
+    .page-header-left h1 span { color: var(--accent-cyan); }
+ 
+    .page-header-left p {
+      margin-top: 6px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 300;
+    }
+ 
+    .live-indicator {
+      display: flex; align-items: center; gap: 7px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-green);
+      letter-spacing: 0.5px;
+    }
+ 
+    .live-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse-green 2s infinite;
+    }
+ 
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(16,212,142,0.4); }
+      50%       { opacity: 0.8; transform: scale(1.2); box-shadow: 0 0 0 6px rgba(16,212,142,0); }
+    }
+ 
+    /* ── SECTION TITLES ── */
+    .section-label {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+ 
+    .section-label-text {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+ 
+    .section-label-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+ 
+    /* ── CARDS ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      transition: var(--transition);
+    }
+ 
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-bright);
+    }
+ 
+    /* ── KPI GRID ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 40px;
+    }
+ 
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px 18px;
+      box-shadow: var(--shadow-card);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+ 
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+    }
+ 
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-card), 0 8px 30px rgba(0,0,0,0.3);
+    }
+ 
+    .kpi-card.good::before  { background: var(--accent-green); }
+    .kpi-card.caution::before { background: var(--accent-yellow); }
+    .kpi-card.risky::before { background: var(--accent-red); }
+    .kpi-card.neutral::before { background: var(--accent-blue); }
+ 
+    .kpi-glow {
+      position: absolute;
+      top: -20px; right: -20px;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      opacity: 0.06;
+      filter: blur(20px);
+    }
+ 
+    .kpi-card.good .kpi-glow  { background: var(--accent-green); }
+    .kpi-card.caution .kpi-glow { background: var(--accent-yellow); }
+    .kpi-card.risky .kpi-glow { background: var(--accent-red); }
+    .kpi-card.neutral .kpi-glow { background: var(--accent-blue); }
+ 
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      font-family: var(--font-mono);
+    }
+ 
+    .kpi-value {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+ 
+    .kpi-card.good    .kpi-value { color: var(--accent-green); }
+    .kpi-card.caution .kpi-value { color: var(--accent-yellow); }
+    .kpi-card.risky   .kpi-value { color: var(--accent-red); }
+    .kpi-card.neutral .kpi-value { color: var(--accent-cyan); }
+ 
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 300;
+    }
+ 
+    .kpi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+ 
+    .kpi-card.good    .kpi-badge { background: rgba(16,212,142,0.1);  color: var(--accent-green); border: 1px solid rgba(16,212,142,0.2);  }
+    .kpi-card.caution .kpi-badge { background: rgba(245,197,66,0.1);  color: var(--accent-yellow); border: 1px solid rgba(245,197,66,0.2); }
+    .kpi-card.risky   .kpi-badge { background: rgba(240,71,71,0.1);   color: var(--accent-red);    border: 1px solid rgba(240,71,71,0.2);  }
+    .kpi-card.neutral .kpi-badge { background: rgba(0,229,255,0.08);  color: var(--accent-cyan);   border: 1px solid rgba(0,229,255,0.2);  }
+ 
+    /* ── TWO-COL GRID ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+ 
+    @media (max-width: 860px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+ 
+    /* ── MONTE CARLO ── */
+    .mc-card {
+      margin-bottom: 40px;
+      padding: 28px;
+    }
+ 
+    .mc-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 22px; flex-wrap: wrap; gap: 12px;
+    }
+ 
+    .mc-card-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+ 
+    .mc-meta {
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+ 
+    .mc-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(0,229,255,0.06);
+      border: 1px solid rgba(0,229,255,0.15);
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+    }
+ 
+    .mc-img-wrapper {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+    }
+ 
+    .mc-img-wrapper img {
+      width: 100%;
+      display: block;
+      border-radius: var(--radius-md);
+    }
+ 
+    /* ── STRESS TEST ── */
+    .stress-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 40px;
+    }
+ 
+    @media (max-width: 640px) {
+      .stress-grid { grid-template-columns: 1fr; }
+    }
+ 
+    .stress-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px 20px;
+      box-shadow: var(--shadow-card);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+ 
+    .stress-card:hover {
+      transform: translateY(-2px);
+      background: var(--bg-card-hover);
+    }
+ 
+    .stress-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+    }
+ 
+    .stress-card.crash-08::after   { background: var(--accent-red); }
+    .stress-card.crash-covid::after { background: var(--accent-orange); }
+    .stress-card.shock-custom::after { background: var(--accent-yellow); }
+ 
+    .stress-icon {
+      font-size: 22px;
+      margin-bottom: 10px;
+      display: block;
+    }
+ 
+    .stress-title {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+ 
+    .stress-value {
+      font-family: var(--font-display);
+      font-size: clamp(20px, 3vw, 30px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+ 
+    .stress-card.crash-08    .stress-value { color: var(--accent-red); }
+    .stress-card.crash-covid .stress-value { color: var(--accent-orange); }
+    .stress-card.shock-custom .stress-value { color: var(--accent-yellow); }
+ 
+    .stress-desc {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 300;
+    }
+ 
+    /* ── SCENARIO SLIDER ── */
+    .scenario-card {
+      padding: 28px;
+      margin-bottom: 40px;
+    }
+ 
+    .scenario-header {
+      margin-bottom: 24px;
+    }
+ 
+    .scenario-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-bottom: 4px;
+    }
+ 
+    .scenario-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+ 
+    .slider-row {
+      display: flex; align-items: center; gap: 20px;
+      margin-bottom: 28px; flex-wrap: wrap;
+    }
+ 
+    .slider-wrap { flex: 1; min-width: 200px; }
+ 
+    input[type="range"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--bg-raised);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+ 
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(0,229,255,0.4);
+      transition: box-shadow 0.15s;
+      cursor: grab;
+    }
+ 
+    input[type="range"]:active::-webkit-slider-thumb {
+      cursor: grabbing;
+      box-shadow: 0 0 20px rgba(0,229,255,0.6);
+    }
+ 
+    input[type="range"]::-moz-range-thumb {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(0,229,255,0.4);
+      border: none;
+      cursor: grab;
+    }
+ 
+    .slider-labels {
+      display: flex; justify-content: space-between;
+      margin-top: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+ 
+    .shock-badge {
+      flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center;
+      min-width: 90px; height: 70px;
+      background: rgba(240,71,71,0.08);
+      border: 1px solid rgba(240,71,71,0.2);
+      border-radius: var(--radius-md);
+      transition: var(--transition);
+    }
+ 
+    .shock-badge-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+ 
+    .shock-badge-value {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent-red);
+      letter-spacing: -0.5px;
+    }
+ 
+    .scenario-results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+ 
+    .scenario-result-box {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      transition: var(--transition);
+    }
+ 
+    .scenario-result-box:hover { border-color: var(--border-bright); }
+ 
+    .result-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+ 
+    .result-value {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--accent-cyan);
+      transition: color 0.3s;
+    }
+ 
+    .result-delta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+ 
+    .result-delta.negative { color: var(--accent-red); }
+    .result-delta.positive { color: var(--accent-green); }
+ 
+    /* ── WARNING BANNER ── */
+    .warning-card {
+      background: rgba(240,71,71,0.06);
+      border: 1px solid rgba(240,71,71,0.2);
+      border-radius: var(--radius-md);
+      padding: 20px 22px;
+      margin-bottom: 40px;
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+ 
+    .warning-icon {
+      flex-shrink: 0;
+      width: 38px; height: 38px;
+      background: rgba(240,71,71,0.12);
+      border: 1px solid rgba(240,71,71,0.25);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+ 
+    .warning-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-red);
+      letter-spacing: 0.3px;
+      margin-bottom: 4px;
+    }
+ 
+    .warning-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 300;
+      line-height: 1.5;
+    }
+ 
+    /* ── ACCORDION ── */
+    .accordion-card {
+      margin-bottom: 40px;
+      overflow: hidden;
+    }
+ 
+    .accordion-item {
+      border-bottom: 1px solid var(--border);
+    }
+ 
+    .accordion-item:last-child { border-bottom: none; }
+ 
+    .accordion-trigger {
+      width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: left;
+    }
+ 
+    .accordion-trigger:hover { background: rgba(255,255,255,0.02); }
+ 
+    .accordion-chevron {
+      width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      color: var(--text-muted);
+    }
+ 
+    .accordion-chevron svg {
+      width: 14px; height: 14px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+ 
+    .accordion-item.open .accordion-chevron { transform: rotate(180deg); }
+ 
+    .accordion-body {
+      display: none;
+      padding: 0 24px 22px;
+    }
+ 
+    .accordion-item.open .accordion-body { display: block; }
+ 
+    .schema-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(0,229,255,0.06);
+      border: 1px solid rgba(0,229,255,0.15);
+      border-radius: 20px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-cyan);
+      margin-bottom: 12px;
+    }
+ 
+    .issue-list {
+      list-style: none;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+ 
+    .issue-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 14px;
+      background: rgba(240,71,71,0.05);
+      border: 1px solid rgba(240,71,71,0.12);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+ 
+    .issue-list li::before {
+      content: '!';
+      flex-shrink: 0;
+      width: 18px; height: 18px;
+      background: rgba(240,71,71,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent-red);
+    }
+ 
+    .no-issues {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px;
+      color: var(--accent-green);
+      font-family: var(--font-mono);
+    }
+ 
+    /* ── DATA PREVIEW TABLE ── */
+    .table-card {
+      padding: 24px;
+      margin-bottom: 40px;
+    }
+ 
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
+    }
+ 
+    .table-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+ 
+    .table-scroll {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+ 
+    /* Override injected table styles */
+    .table-scroll table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+ 
+    .table-scroll thead tr {
+      background: rgba(255,255,255,0.04) !important;
+    }
+ 
+    .table-scroll thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+ 
+    .table-scroll tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+ 
+    .table-scroll tbody tr:last-child { border-bottom: none; }
+ 
+    .table-scroll tbody tr:hover { background: rgba(255,255,255,0.02); }
+ 
+    .table-scroll tbody td {
+      padding: 11px 16px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+ 
+    /* ── FOOTER ── */
+    .page-footer {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+ 
+    .footer-copy {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+ 
+    .footer-copy span { color: var(--accent-cyan); }
+ 
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 16px; }
+      .page-wrapper { padding: 24px 16px 60px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .mc-card { padding: 18px; }
+      .scenario-card { padding: 18px; }
+      .table-card { padding: 16px; }
+    }
+ 
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .nav-badge { display: none; }
+    }
+ 
+    /* ── ENTRY ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+ 
+    .kpi-card, .mc-card, .stress-card, .scenario-card,
+    .warning-card, .accordion-card, .table-card {
+      animation: fadeUp 0.4s ease both;
+    }
+ 
+    .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.10s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.20s; }
+    .kpi-card:nth-child(5) { animation-delay: 0.25s; }
+    .kpi-card:nth-child(6) { animation-delay: 0.30s; }
+    /* ── MONTE CARLO INTERACTIVE ── */
+    .mc-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 18px;
+      margin-bottom: 22px;
+      padding: 20px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+ 
+    .mc-ctrl { display: flex; flex-direction: column; gap: 6px; }
+ 
+    .mc-ctrl-header {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+ 
+    .mc-ctrl-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+ 
+    .mc-ctrl-value {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      letter-spacing: -0.3px;
+      min-width: 52px;
+      text-align: right;
+    }
+ 
+    .mc-slider {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      height: 3px;
+      background: var(--bg-base);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+ 
+    .mc-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0,229,255,0.45);
+      transition: box-shadow 0.15s, transform 0.15s;
+      cursor: grab;
+    }
+ 
+    .mc-slider:active::-webkit-slider-thumb {
+      cursor: grabbing;
+      transform: scale(1.2);
+      box-shadow: 0 0 18px rgba(0,229,255,0.65);
+    }
+ 
+    .mc-slider::-moz-range-thumb {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      border: none;
+      cursor: grab;
+    }
+ 
+    .mc-slider-ticks {
+      display: flex; justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+ 
+    .mc-canvas-wrap {
+      position: relative;
+      width: 100%;
+      margin-bottom: 18px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+    }
+ 
+    #mcCanvas {
+      display: block;
+      width: 100%;
+      height: 340px;
+    }
+ 
+    .mc-canvas-overlay {
+      position: absolute; inset: 0;
+      pointer-events: none;
+    }
+ 
+    .mc-tooltip {
+      position: absolute;
+      background: var(--bg-raised);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-primary);
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+ 
+    .mc-y-axis {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 64px;
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+      padding: 12px 8px 24px 6px;
+      pointer-events: none;
+    }
+ 
+    .mc-x-axis {
+      position: absolute;
+      bottom: 0; left: 64px; right: 0;
+      height: 24px;
+      display: flex; justify-content: space-between;
+      padding: 4px 8px;
+      pointer-events: none;
+    }
+ 
+    .mc-y-axis span, .mc-x-axis span {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+ 
+    .mc-stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+    }
+ 
+    .mc-stat {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      transition: var(--transition);
+    }
+ 
+    .mc-stat:hover { border-color: var(--border-bright); }
+ 
+    .mc-stat-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+ 
+    .mc-stat-value {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--accent-cyan);
+    }
+ 
+    .mc-stat-value.good   { color: var(--accent-green); }
+    .mc-stat-value.risky  { color: var(--accent-red); }
+ 
+  </style>
+</head>
+<body>
+ 
+<!-- ╔══════════════════════════════ NAV ══════════════════════════════╗ -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo-mark">RL</div>
+    <span class="nav-title"><span>Risk</span>Lens</span>
+    <span class="nav-badge">RISK ENGINE v2</span>
+  </div>
+  <div class="nav-right">
+    <div class="live-indicator">
+      <div class="live-dot"></div>
+      ANALYSIS LIVE
+    </div>
+    <a href="/download-report" class="btn-download">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download PDF
+    </a>
+    <a href="/" class="btn-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Upload Another
+    </a>
+  </div>
+</nav>
+ 
+<!-- ╔══════════════════════════════ PAGE ══════════════════════════════╗ -->
+<div class="page-wrapper">
+ 
+  <!-- ── Page Header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Portfolio Risk <span>Dashboard</span></h1>
+      <p>Portfolio Risk &amp; Stress Testing Engine — Full Simulation Report</p>
+    </div>
+  </div>
+ 
+  <!-- ── KPI Cards ── -->
+  <div class="section-label">
+    <span class="section-label-text">Key Risk Metrics</span>
+    <div class="section-label-line"></div>
+  </div>
+ 
+  <div class="kpi-grid">
+    <!-- Volatility -->
+    <div class="kpi-card {% if volatility|float > 0.25 %}risky{% elif volatility|float > 0.15 %}caution{% else %}good{% endif %}">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Volatility</div>
+      <div class="kpi-value">{{ "%.1f"|format(volatility|float * 100) }}%</div>
+      <div class="kpi-sub">Annualised std dev</div>
+      <div class="kpi-badge">
+        {% if volatility|float > 0.25 %}⚠ HIGH RISK{% elif volatility|float > 0.15 %}△ CAUTION{% else %}✓ STABLE{% endif %}
+      </div>
+    </div>
+ 
+    <!-- Sharpe -->
+    <div class="kpi-card {% if sharpe|float >= 1 %}good{% elif sharpe|float >= 0.5 %}caution{% else %}risky{% endif %}">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Sharpe Ratio</div>
+      <div class="kpi-value">{{ "%.2f"|format(sharpe|float) }}</div>
+      <div class="kpi-sub">Risk-adjusted return</div>
+      <div class="kpi-badge">
+        {% if sharpe|float >= 1 %}✓ GOOD{% elif sharpe|float >= 0.5 %}△ MARGINAL{% else %}⚠ POOR{% endif %}
+      </div>
+    </div>
+ 
+    <!-- Beta -->
+    <div class="kpi-card {% if beta|float > 1.3 %}risky{% elif beta|float > 1 %}caution{% else %}good{% endif %}">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Beta</div>
+      <div class="kpi-value">{{ "%.2f"|format(beta|float) }}</div>
+      <div class="kpi-sub">Market sensitivity</div>
+      <div class="kpi-badge">
+        {% if beta|float > 1.3 %}⚠ AGGRESSIVE{% elif beta|float > 1 %}△ ABOVE MKT{% else %}✓ DEFENSIVE{% endif %}
+      </div>
+    </div>
+ 
+    <!-- VaR -->
+    <div class="kpi-card {% if var|float < -0.15 %}risky{% elif var|float < -0.08 %}caution{% else %}good{% endif %}">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">VaR (95%)</div>
+      <div class="kpi-value">{{ "%.1f"|format(var|float * 100) }}%</div>
+      <div class="kpi-sub">Daily max expected loss</div>
+      <div class="kpi-badge">
+        {% if var|float < -0.15 %}⚠ SEVERE{% elif var|float < -0.08 %}△ ELEVATED{% else %}✓ CONTAINED{% endif %}
+      </div>
+    </div>
+ 
+    <!-- CVaR -->
+    <div class="kpi-card {% if cvar|float < -0.2 %}risky{% elif cvar|float < -0.1 %}caution{% else %}good{% endif %}">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">CVaR (95%)</div>
+      <div class="kpi-value">{{ "%.1f"|format(cvar|float * 100) }}%</div>
+      <div class="kpi-sub">Expected shortfall</div>
+      <div class="kpi-badge">
+        {% if cvar|float < -0.2 %}⚠ SEVERE{% elif cvar|float < -0.1 %}△ ELEVATED{% else %}✓ OK{% endif %}
+      </div>
+    </div>
+ 
+    <!-- Max Drawdown -->
+    <div class="kpi-card {% if max_drawdown|float < -0.30 %}risky{% elif max_drawdown|float < -0.15 %}caution{% else %}good{% endif %}">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">Max Drawdown</div>
+      <div class="kpi-value">{{ "%.1f"|format(max_drawdown|float * 100) }}%</div>
+      <div class="kpi-sub">Peak-to-trough decline</div>
+      <div class="kpi-badge">
+        {% if max_drawdown|float < -0.30 %}⚠ SEVERE{% elif max_drawdown|float < -0.15 %}△ NOTABLE{% else %}✓ MILD{% endif %}
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ── Monte Carlo Interactive ── -->
+  <div class="section-label">
+    <span class="section-label-text">Monte Carlo Simulation</span>
+    <div class="section-label-line"></div>
+  </div>
+ 
+  <div class="card mc-card" id="mcCard">
+    <div class="mc-card-header">
+      <div>
+        <div class="mc-card-title">Interactive Monte Carlo Simulator</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:3px;font-weight:300;">
+          Geometric Brownian Motion &mdash; adjust parameters to re-run live
+        </div>
+      </div>
+      <div class="mc-meta">
+        <span class="mc-tag" id="mcPathsTag">PATHS: 200</span>
+        <span class="mc-tag">METHOD: GBM</span>
+        <span class="mc-tag" id="mcConfTag">95% CI</span>
+      </div>
+    </div>
+ 
+    <!-- Controls -->
+    <div class="mc-controls-grid">
+      <div class="mc-ctrl">
+        <div class="mc-ctrl-header">
+          <span class="mc-ctrl-label">Starting Portfolio</span>
+          <span class="mc-ctrl-value" id="startValue">₹{{"{:,.0f}".format(current_value)}}</span>
+        </div>
+        <input type="range" class="mc-slider" id="startPortfolio"
+               min="1000" max="10000000" value="{{ mc_start }}" step="10000">>
+        <div class="mc-slider-ticks"><span>₹1L</span><span>₹50L</span><span>₹1Cr</span></div>
+      </div>
+ 
+      <div class="mc-ctrl">
+        <div class="mc-ctrl-header">
+          <span class="mc-ctrl-label">Time Horizon</span>
+          <span class="mc-ctrl-value" id="yearsValue">10 yr</span>
+        </div>
+        <input type="range" class="mc-slider" id="mcYears"
+               min="1" max="30" value="10" step="1">
+        <div class="mc-slider-ticks"><span>1yr</span><span>15yr</span><span>30yr</span></div>
+      </div>
+ 
+      <div class="mc-ctrl">
+        <div class="mc-ctrl-header">
+          <span class="mc-ctrl-label">Expected Return</span>
+          <span class="mc-ctrl-value" id="returnValue">30%</span>
+        </div>
+        <input type="range" class="mc-slider" id="mcReturn"
+               min="1" max="40" value="{{ mc_return }}" step="1">
+        <div class="mc-slider-ticks"><span>1%</span><span>20%</span><span>40%</span></div>
+      </div>
+ 
+      <div class="mc-ctrl">
+        <div class="mc-ctrl-header">
+          <span class="mc-ctrl-label">Volatility</span>
+          <span class="mc-ctrl-value" id="volValue">17%</span>
+        </div>
+        <input type="range" class="mc-slider" id="mcVolatility"
+               min="1" max="50" value="{{ mc_vol }}" step="1">
+        <div class="mc-slider-ticks"><span>1%</span><span>25%</span><span>50%</span></div>
+      </div>
+    </div>
+ 
+    <!-- Canvas -->
+    <div class="mc-canvas-wrap">
+      <canvas id="mcCanvas"></canvas>
+      <div class="mc-canvas-overlay" id="mcOverlay">
+        <div class="mc-tooltip" id="mcTooltip" style="display:none;"></div>
+      </div>
+      <div class="mc-y-axis" id="mcYAxis"></div>
+      <div class="mc-x-axis" id="mcXAxis"></div>
+    </div>
+ 
+    <!-- Stats row -->
+    <div class="mc-stats-row">
+      <div class="mc-stat">
+        <div class="mc-stat-label">Median Final Value</div>
+        <div class="mc-stat-value" id="statMedian">—</div>
+      </div>
+      <div class="mc-stat">
+        <div class="mc-stat-label">95th Percentile</div>
+        <div class="mc-stat-value good" id="statP95">—</div>
+      </div>
+      <div class="mc-stat">
+        <div class="mc-stat-label">5th Percentile</div>
+        <div class="mc-stat-value risky" id="statP5">—</div>
+      </div>
+      <div class="mc-stat">
+        <div class="mc-stat-label">Prob. of Profit</div>
+        <div class="mc-stat-value" id="statProfit">—</div>
+      </div>
+      <div class="mc-stat">
+        <div class="mc-stat-label">Expected CAGR</div>
+        <div class="mc-stat-value" id="statCagr">—</div>
+      </div>
+      <div class="mc-stat">
+        <div class="mc-stat-label">Max Simulated Loss</div>
+        <div class="mc-stat-value risky" id="statMaxLoss">—</div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ── Stress Testing ── -->
+  <div class="section-label">
+    <span class="section-label-text">Stress Test Scenarios</span>
+    <div class="section-label-line"></div>
+  </div>
+ 
+  <div class="stress-grid">
+    <div class="stress-card crash-08">
+      <span class="stress-icon">💥</span>
+      <div class="stress-title">2008 Financial Crash</div>
+      <div class="stress-value">₹{{ "{:,.0f}".format(value_2008|float) }}</div>
+      <div class="stress-desc">Portfolio value under 2008 crisis conditions</div>
+    </div>
+ 
+    <div class="stress-card crash-covid">
+      <span class="stress-icon">🦠</span>
+      <div class="stress-title">COVID-19 Crash</div>
+      <div class="stress-value">₹{{ "{:,.0f}".format(value_covid|float) }}</div>
+      <div class="stress-desc">Portfolio value under March 2020 drawdown</div>
+    </div>
+ 
+    <div class="stress-card shock-custom">
+      <span class="stress-icon">⚡</span>
+      <div class="stress-title">Custom Shock</div>
+      <div class="stress-value">₹{{ "{:,.0f}".format(value_custom|float) }}</div>
+      <div class="stress-desc">User-defined shock scenario outcome</div>
+    </div>
+  </div>
+ 
+  <!-- ── Scenario Slider ── -->
+  <div class="section-label">
+    <span class="section-label-text">Interactive Scenario Analysis</span>
+    <div class="section-label-line"></div>
+  </div>
+ 
+  <div class="card scenario-card">
+    <div class="scenario-header">
+      <div class="scenario-title">What-If Shock Simulator</div>
+      <div class="scenario-subtitle">Drag the slider to simulate a market drawdown and see projected portfolio impact in real time.</div>
+    </div>
+ 
+    <div class="slider-row">
+      <div class="slider-wrap">
+        <input type="range" id="shockSlider" min="-50" max="0" value="-20" step="1"/>
+        <div class="slider-labels">
+          <span>−50%</span>
+          <span>−25%</span>
+          <span>0%</span>
+        </div>
+      </div>
+      <div class="shock-badge" id="shockBadge">
+        <span class="shock-badge-label">SHOCK</span>
+        <span class="shock-badge-value" id="shockPct">−20%</span>
+      </div>
+    </div>
+ 
+    <div class="scenario-results">
+      <div class="scenario-result-box">
+        <div class="result-label">Current Portfolio Value</div>
+        <div class="result-value" id="currentValDisplay">₹{{ "{:,.0f}".format(current_value|float) }}</div>
+        <div class="result-delta">Baseline (no shock)</div>
+      </div>
+      <div class="scenario-result-box">
+        <div class="result-label">Projected Value After Shock</div>
+        <div class="result-value" id="projectedVal">—</div>
+        <div class="result-delta negative" id="projectedDelta">—</div>
+      </div>
+      <div class="scenario-result-box">
+        <div class="result-label">Estimated Loss</div>
+        <div class="result-value" id="estimatedLoss" style="color: var(--accent-red);">—</div>
+        <div class="result-delta negative" id="lossPercent">—</div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ── Portfolio Warning ── -->
+  {% if risk_flag %}
+  <div class="section-label">
+    <span class="section-label-text">Portfolio Warnings</span>
+    <div class="section-label-line"></div>
+  </div>
+ 
+  <div class="warning-card">
+    <div class="warning-icon">⚠</div>
+    <div>
+      <div class="warning-title">RISK FLAG DETECTED</div>
+      <div class="warning-text">{{ risk_flag }}</div>
+    </div>
+  </div>
+  {% endif %}
+ 
+  <!-- ── Schema + Validation Accordion ── -->
+  <div class="section-label">
+    <span class="section-label-text">Schema &amp; Validation</span>
+    <div class="section-label-line"></div>
+  </div>
+ 
+  <div class="card accordion-card">
+    <div class="accordion-item" id="acc-schema">
+      <button class="accordion-trigger" onclick="toggleAccordion('acc-schema')">
+        <span>Detected Schema</span>
+        <span class="accordion-chevron">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </button>
+      <div class="accordion-body">
+        <div class="schema-tag">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          {{ schema }}
+        </div>
+        <p style="font-size:13px; color: var(--text-muted); font-weight:300;">Schema was automatically detected from the uploaded portfolio file.</p>
+      </div>
+    </div>
+ 
+    <div class="accordion-item" id="acc-issues">
+      <button class="accordion-trigger" onclick="toggleAccordion('acc-issues')">
+        <span>Validation Issues</span>
+        <span class="accordion-chevron">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </button>
+      <div class="accordion-body">
+        {% if issues %}
+        <ul class="issue-list">
+          {% for issue in issues %}
+          <li>{{ issue }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="no-issues">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          No validation issues found. Portfolio data is clean.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ── Data Preview ── -->
+  <div class="section-label">
+    <span class="section-label-text">Portfolio Data Preview</span>
+    <div class="section-label-line"></div>
+  </div>
+ 
+  <div class="card table-card">
+    <div class="table-header">
+      <div class="table-title">Data Preview</div>
+      <span class="mc-tag">FIRST 10 ROWS</span>
+    </div>
+    <div class="table-scroll">
+      {{ preview|safe }}
+    </div>
+  </div>
+ 
+  <!-- ── Footer ── -->
+  <div class="page-footer">
+    <div class="footer-copy">
+      <span>RiskLens</span> — Portfolio Risk &amp; Stress Testing Engine
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <a href="/download-report" class="btn-download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PDF Report
+      </a>
+      <a href="/" class="btn-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Upload Another Portfolio
+      </a>
+    </div>
+  </div>
+ 
+</div><!-- /page-wrapper -->
+ 
+<!-- ╔══════════════════════════════ JS ══════════════════════════════╗ -->
+<script>
+  /* ── Accordion ── */
+  function toggleAccordion(id) {
+    const item = document.getElementById(id);
+    item.classList.toggle('open');
+  }
+ 
+  /* ── Scenario Slider ── */
+  const slider       = document.getElementById('shockSlider');
+  const shockPct     = document.getElementById('shockPct');
+  const projectedVal = document.getElementById('projectedVal');
+  const projectedDelta = document.getElementById('projectedDelta');
+  const estimatedLoss  = document.getElementById('estimatedLoss');
+  const lossPercent    = document.getElementById('lossPercent');
+  const shockBadge     = document.getElementById('shockBadge');
+ 
+  const BASE_VALUE = parseFloat("{{ current_value }}") || 0;
+ 
+  function fmt(n) {
+    return '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  }
+ 
+  function updateSlider() {
+    const shock = parseInt(slider.value, 10);
+    const expected = BASE_VALUE * (1 + shock / 100);
+    const loss = BASE_VALUE - expected;
+    const lossPct = shock;
+ 
+    shockPct.textContent = shock + '%';
+ 
+    /* colour the badge */
+    const intensity = Math.abs(shock);
+    if (intensity >= 30) {
+      shockBadge.style.background = 'rgba(240,71,71,0.12)';
+      shockBadge.style.borderColor = 'rgba(240,71,71,0.3)';
+      shockPct.style.color = 'var(--accent-red)';
+    } else if (intensity >= 15) {
+      shockBadge.style.background = 'rgba(245,197,66,0.08)';
+      shockBadge.style.borderColor = 'rgba(245,197,66,0.25)';
+      shockPct.style.color = 'var(--accent-yellow)';
+    } else {
+      shockBadge.style.background = 'rgba(16,212,142,0.06)';
+      shockBadge.style.borderColor = 'rgba(16,212,142,0.2)';
+      shockPct.style.color = 'var(--accent-green)';
+    }
+ 
+    projectedVal.textContent = fmt(expected);
+    projectedVal.style.color = shock < -20 ? 'var(--accent-red)' : shock < -10 ? 'var(--accent-yellow)' : 'var(--accent-green)';
+ 
+    projectedDelta.textContent = shock + '% applied to current value';
+ 
+    estimatedLoss.textContent = fmt(loss);
+    lossPercent.textContent   = shock + '% portfolio drawdown';
+ 
+    /* update slider track fill */
+    const pct = ((shock - (-50)) / (0 - (-50))) * 100;
+    slider.style.background =
+      `linear-gradient(to right, var(--accent-cyan) ${pct}%, var(--bg-raised) ${pct}%)`;
+  }
+ 
+  slider.addEventListener('input', updateSlider);
+  updateSlider(); /* init */
+ 
+  /* ════════════════════════════════════════════════════
+     MONTE CARLO INTERACTIVE ENGINE
+     Geometric Brownian Motion:
+       S(t+dt) = S(t) * exp((mu - 0.5*sigma^2)*dt + sigma*sqrt(dt)*Z)
+     Z ~ N(0,1)
+  ════════════════════════════════════════════════════ */
+  (function() {
+    const canvas   = document.getElementById('mcCanvas');
+    const ctx      = canvas.getContext('2d');
+    const tooltip  = document.getElementById('mcTooltip');
+    const overlay  = document.getElementById('mcCanvas').parentElement;
+ 
+    const elStart  = document.getElementById('startPortfolio');
+    const elYears  = document.getElementById('mcYears');
+    const elReturn = document.getElementById('mcReturn');
+    const elVol    = document.getElementById('mcVolatility');
+ 
+    const lblStart  = document.getElementById('startValue');
+    const lblYears  = document.getElementById('yearsValue');
+    const lblReturn = document.getElementById('returnValue');
+    const lblVol    = document.getElementById('volValue');
+ 
+    const statMedian  = document.getElementById('statMedian');
+    const statP95     = document.getElementById('statP95');
+    const statP5      = document.getElementById('statP5');
+    const statProfit  = document.getElementById('statProfit');
+    const statCagr    = document.getElementById('statCagr');
+    const statMaxLoss = document.getElementById('statMaxLoss');
+ 
+    const N_PATHS  = 200;
+    const N_STEPS  = 252;   // trading days per year step
+    const PAD      = { top: 24, right: 20, bottom: 36, left: 70 };
+ 
+    /* ── helpers ── */
+    function fmtINR(v) {
+      if (v >= 1e7)  return '₹' + (v/1e7).toFixed(2) + 'Cr';
+      if (v >= 1e5)  return '₹' + (v/1e5).toFixed(1) + 'L';
+      if (v >= 1e3)  return '₹' + (v/1e3).toFixed(0) + 'K';
+      return '₹' + v.toFixed(0);
+    }
+ 
+    function boxMuller() {
+      let u, v, s;
+      do {
+        u = Math.random() * 2 - 1;
+        v = Math.random() * 2 - 1;
+        s = u*u + v*v;
+      } while (s >= 1 || s === 0);
+      return u * Math.sqrt(-2 * Math.log(s) / s);
+    }
+ 
+    function colorAlpha(hexStr, alpha) {
+      const r = parseInt(hexStr.slice(1,3),16);
+      const g = parseInt(hexStr.slice(3,5),16);
+      const b = parseInt(hexStr.slice(5,7),16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+ 
+    /* ── simulation ── */
+    function simulate(S0, mu, sigma, years) {
+      const steps = years * N_STEPS;
+      const dt    = 1 / N_STEPS;
+      const drift = (mu - 0.5 * sigma * sigma) * dt;
+      const diff  = sigma * Math.sqrt(dt);
+      const paths = [];
+ 
+      for (let p = 0; p < N_PATHS; p++) {
+        const path = new Float64Array(steps + 1);
+        path[0] = S0;
+        for (let t = 1; t <= steps; t++) {
+          path[t] = path[t-1] * Math.exp(drift + diff * boxMuller());
+        }
+        paths.push(path);
+      }
+      return paths;
+    }
+ 
+    /* ── draw ── */
+    function draw() {
+      const S0 = parseFloat(document.getElementById("startPortfolio").value)
+      const years = parseInt(elYears.value);
+      const mu    = parseFloat(elReturn.value) / 100;
+      const sigma = parseFloat(elVol.value)    / 100;
+ 
+      /* resize canvas to CSS size */
+      const cssW = canvas.clientWidth || 800;
+      const cssH = canvas.clientHeight || 340;
+      canvas.width  = cssW * window.devicePixelRatio;
+      canvas.height = cssH * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      const W = cssW, H = cssH;
+ 
+      const paths   = simulate(S0, mu, sigma, years);
+      const steps   = years * N_STEPS;
+ 
+      /* finals for stats */
+      const finals  = paths.map(p => p[steps]).sort((a,b) => a - b);
+      const median  = finals[Math.floor(N_PATHS * 0.5)];
+      const p95     = finals[Math.floor(N_PATHS * 0.95)];
+      const p5      = finals[Math.floor(N_PATHS * 0.05)];
+      const profitN = finals.filter(v => v > S0).length;
+ 
+      /* value range */
+      let minV = Infinity, maxV = -Infinity;
+      for (const path of paths)
+        for (let t = 0; t <= steps; t++) {
+          if (path[t] < minV) minV = path[t];
+          if (path[t] > maxV) maxV = path[t];
+        }
+      const vPad = (maxV - minV) * 0.05;
+      minV -= vPad; maxV += vPad;
+ 
+      const scaleX = t  => PAD.left + (t / steps) * (W - PAD.left - PAD.right);
+      const scaleY = v  => PAD.top  + (1 - (v - minV)/(maxV - minV)) * (H - PAD.top - PAD.bottom);
+ 
+      /* background */
+      ctx.fillStyle = '#090d12';
+      ctx.fillRect(0, 0, W, H);
+ 
+      /* grid */
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth   = 0.5;
+      const nGridY = 5;
+      for (let i = 0; i <= nGridY; i++) {
+        const v = minV + (maxV - minV) * (i / nGridY);
+        const y = scaleY(v);
+        ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
+      }
+      const nGridX = Math.min(years, 10);
+      for (let i = 0; i <= nGridX; i++) {
+        const t = Math.round((i / nGridX) * steps);
+        const x = scaleX(t);
+        ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, H - PAD.bottom); ctx.stroke();
+      }
+ 
+      /* confidence band (5th–95th) */
+      ctx.beginPath();
+      for (let t = 0; t <= steps; t++) {
+        const vals = paths.map(p => p[t]).sort((a,b)=>a-b);
+        const lo = vals[Math.floor(N_PATHS*0.05)];
+        ctx.lineTo(scaleX(t), scaleY(lo));
+      }
+      for (let t = steps; t >= 0; t--) {
+        const vals = paths.map(p => p[t]).sort((a,b)=>a-b);
+        const hi = vals[Math.floor(N_PATHS*0.95)];
+        ctx.lineTo(scaleX(t), scaleY(hi));
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0,229,255,0.06)';
+      ctx.fill();
+ 
+      /* individual paths */
+      for (let p = 0; p < paths.length; p++) {
+        const path = paths[p];
+        const fv   = path[steps];
+        let   col;
+        if (fv > p95 * 0.9)   col = colorAlpha('#10d48e', 0.25);
+        else if (fv < p5*1.1)  col = colorAlpha('#f04747', 0.20);
+        else                   col = colorAlpha('#00e5ff', 0.12);
+ 
+        ctx.beginPath();
+        ctx.moveTo(scaleX(0), scaleY(path[0]));
+        for (let t = 1; t <= steps; t += 2)
+          ctx.lineTo(scaleX(t), scaleY(path[t]));
+        ctx.strokeStyle = col;
+        ctx.lineWidth   = 0.7;
+        ctx.stroke();
+      }
+ 
+      /* P5 line */
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(240,71,71,0.7)';
+      ctx.lineWidth   = 1.2;
+      for (let t = 0; t <= steps; t++) {
+        const vals = paths.map(p => p[t]).sort((a,b)=>a-b);
+        const v = vals[Math.floor(N_PATHS*0.05)];
+        t === 0 ? ctx.moveTo(scaleX(t), scaleY(v)) : ctx.lineTo(scaleX(t), scaleY(v));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+ 
+      /* P95 line */
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(16,212,142,0.7)';
+      ctx.lineWidth   = 1.2;
+      for (let t = 0; t <= steps; t++) {
+        const vals = paths.map(p => p[t]).sort((a,b)=>a-b);
+        const v = vals[Math.floor(N_PATHS*0.95)];
+        t === 0 ? ctx.moveTo(scaleX(t), scaleY(v)) : ctx.lineTo(scaleX(t), scaleY(v));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+ 
+      /* Median line */
+      ctx.beginPath();
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth   = 2;
+      for (let t = 0; t <= steps; t++) {
+        const vals = paths.map(p => p[t]).sort((a,b)=>a-b);
+        const v = vals[Math.floor(N_PATHS*0.5)];
+        t === 0 ? ctx.moveTo(scaleX(t), scaleY(v)) : ctx.lineTo(scaleX(t), scaleY(v));
+      }
+      ctx.stroke();
+ 
+      /* Starting line */
+      const sy = scaleY(S0);
+      ctx.beginPath();
+      ctx.setLineDash([6, 3]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth   = 0.8;
+      ctx.moveTo(PAD.left, sy); ctx.lineTo(W - PAD.right, sy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+ 
+      /* Y axis labels */
+      ctx.fillStyle = 'rgba(74,96,112,0.9)';
+      ctx.font      = `${9 * window.devicePixelRatio / window.devicePixelRatio}px monospace`;
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= nGridY; i++) {
+        const v = minV + (maxV - minV) * (i / nGridY);
+        const y = scaleY(v);
+        ctx.fillText(fmtINR(v), PAD.left - 5, y + 3);
+      }
+ 
+      /* X axis labels */
+      ctx.textAlign = 'center';
+      for (let i = 0; i <= nGridX; i++) {
+        const t = Math.round((i / nGridX) * steps);
+        const x = scaleX(t);
+        const yr = Math.round(t / N_STEPS);
+        ctx.fillText(`Y${yr}`, x, H - PAD.bottom + 14);
+      }
+ 
+      /* Legend */
+      const legend = [
+        { color:'#00e5ff', label:'Median', dash:false },
+        { color:'#10d48e', label:'P95',    dash:true  },
+        { color:'#f04747', label:'P5',     dash:true  },
+      ];
+      let lx = W - PAD.right - 10;
+      const ly = PAD.top + 12;
+      ctx.textAlign = 'right';
+      ctx.font = '9px monospace';
+      for (const leg of legend.reverse()) {
+        ctx.fillStyle = leg.color;
+        ctx.fillText(leg.label, lx, ly);
+        lx -= (leg.label.length * 5.5 + 20);
+      }
+ 
+      /* ── Update stats ── */
+      const cagr = Math.pow(median / S0, 1 / years) - 1;
+      const worstFinal = finals[0];
+      const maxLoss = ((worstFinal - S0) / S0) * 100;
+ 
+      statMedian.textContent  = fmtINR(median);
+      statP95.textContent     = fmtINR(p95);
+      statP5.textContent      = fmtINR(p5);
+      statProfit.textContent  = ((profitN / N_PATHS) * 100).toFixed(1) + '%';
+      statCagr.textContent    = (cagr * 100).toFixed(1) + '% p.a.';
+      statMaxLoss.textContent = maxLoss.toFixed(1) + '%';
+    }
+ 
+    /* ── Label updaters ── */
+    function fmtINRShort(v) {
+      if (v >= 1e7)  return '₹' + (v/1e7).toFixed(1) + 'Cr';
+      if (v >= 1e5)  return '₹' + (v/1e5).toFixed(1) + 'L';
+      return '₹' + (v/1e3).toFixed(0) + 'K';
+    }
+ 
+    function updateLabels() {
+      lblStart.textContent  = fmtINRShort(parseFloat(elStart.value));
+      lblYears.textContent  = elYears.value  + ' yr';
+      lblReturn.textContent = elReturn.value + '%';
+      lblVol.textContent    = elVol.value    + '%';
+ 
+      /* slider track fill */
+      [elStart, elYears, elReturn, elVol].forEach(sl => {
+        const min = parseFloat(sl.min), max = parseFloat(sl.max), val = parseFloat(sl.value);
+        const pct = ((val - min) / (max - min)) * 100;
+        sl.style.background = `linear-gradient(to right, var(--accent-cyan) ${pct}%, var(--bg-base) ${pct}%)`;
+      });
+    }
+ 
+    /* ── Debounced redraw ── */
+    let drawTimer;
+    function scheduleDraw() {
+      updateLabels();
+      clearTimeout(drawTimer);
+      drawTimer = setTimeout(draw, 40);
+    }
+ 
+    [elStart, elYears, elReturn, elVol].forEach(el =>
+      el.addEventListener('input', scheduleDraw)
+    );
+ 
+    /* ── Tooltip on hover ── */
+    canvas.addEventListener('mousemove', function(e) {
+      const rect  = canvas.getBoundingClientRect();
+      const mx    = e.clientX - rect.left;
+      const my    = e.clientY - rect.top;
+      const W     = canvas.clientWidth;
+      const H     = canvas.clientHeight;
+      const steps = parseInt(elYears.value) * N_STEPS;
+      const S0    = parseFloat(elStart.value);
+      const mu    = parseFloat(elReturn.value) / 100;
+      const sigma = parseFloat(elVol.value)    / 100;
+ 
+      const tRatio = Math.max(0, Math.min(1, (mx - PAD.left) / (W - PAD.left - PAD.right)));
+      const tStep  = Math.round(tRatio * steps);
+      const yr     = (tStep / N_STEPS).toFixed(1);
+ 
+      /* quick analytical percentiles for tooltip */
+      const dt    = tStep / N_STEPS;
+      const drift = (mu - 0.5 * sigma * sigma) * dt;
+      const stdev = sigma * Math.sqrt(dt);
+      const med   = S0 * Math.exp(drift);
+      const p95t  = S0 * Math.exp(drift + 1.645 * stdev);
+      const p5t   = S0 * Math.exp(drift - 1.645 * stdev);
+ 
+      function fI(v) {
+        if (v >= 1e7) return '₹' + (v/1e7).toFixed(2) + 'Cr';
+        if (v >= 1e5) return '₹' + (v/1e5).toFixed(2) + 'L';
+        return '₹' + v.toFixed(0);
+      }
+ 
+      tooltip.style.display = 'block';
+      tooltip.innerHTML =
+        `<b style="color:var(--accent-cyan)">Year ${yr}</b><br>` +
+        `<span style="color:#10d48e">P95: ${fI(p95t)}</span><br>` +
+        `<span style="color:#00e5ff">Med: ${fI(med)}</span><br>` +
+        `<span style="color:#f04747">P5: ${fI(p5t)}</span>`;
+ 
+      let tx = mx + 14, ty = my - 10;
+      const tw = 130, th = 70;
+      if (tx + tw > W) tx = mx - tw - 8;
+      if (ty + th > H) ty = H - th - 8;
+      tooltip.style.left = tx + 'px';
+      tooltip.style.top  = ty + 'px';
+    });
+ 
+    canvas.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
+ 
+    /* ── Init ── */
+    updateLabels();
+    draw();
+    window.addEventListener('resize', () => { clearTimeout(drawTimer); drawTimer = setTimeout(draw, 80); });
+  })();
+ 
+</script>
+ 
+</body>
+</html>
