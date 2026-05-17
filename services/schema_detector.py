@@ -41,9 +41,10 @@ def detect_schema(df):
     cols = [c.lower().strip() for c in df.columns]
 
     for standard, aliases in COLUMN_ALIASES.items():
-        for alias in aliases:
-            for col in cols:
-                if alias == col:
+        for col in cols:
+            for alias in aliases:
+                if alias in col:   # 🔥 FIX: substring match
                     mapping[standard] = col
+                    break
 
     return mapping
