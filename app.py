@@ -143,18 +143,25 @@ def upload():
         price_col = "price" if "price" in df.columns else "ltp"
         current_value = float((df[weight_col] * df[price_col]).sum())
     else:
-    # fetch latest prices from Yahoo
         latest_prices = prices.iloc[-1]
 
         current_value = 0
-        normalized_tickers = normalize_tickers(tickers)
-        for raw_ticker, yf_ticker in zip(tickers, normalized_tickers):
+
+        for ticker in tickers:
+            yf_ticker = ticker.upper().strip()
+            if "." not in yf_ticker:
+                yf_ticker = yf_ticker + ".NS"
+
             qty = df.loc[
-                df[ticker_col] == raw_ticker,
+                df[ticker_col] == ticker,
                 weight_col
             ].values[0]
 
-            price = latest_prices[yf_ticker]
+            # SAFE access
+            if yf_ticker in latest_prices:
+                price = latest_prices[yf_ticker]
+            else:
+                continue  # skip missing ticker safely
 
             current_value += qty * price
     returns = compute_returns(prices)
