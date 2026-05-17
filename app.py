@@ -255,11 +255,7 @@ def too_large(e):
 @app.errorhandler(500)
 def internal_error(e):
     logging.exception(e)
-    return render_template(
-        "error.html",
-        message="Ticker data unavailable. Please try again."
-    ), 500
-
+    return "Ticker data unavailable. Please try again.", 500
 
 
 if __name__ == "__main__":
