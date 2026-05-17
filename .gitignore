@@ -5,7 +5,7 @@ __pycache__/
 .env
 data/uploads/
 
-static/
+
 # generated outputs
 static/*.pdf
 static/*.png
