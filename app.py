@@ -50,6 +50,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {"csv"}
 MAX_ROWS = 500
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
+os.makedirs("static", exist_ok=True)
 
 def allowed_file(filename):
     return (
@@ -191,7 +192,9 @@ def upload():
     plt.xlabel("Days")
     plt.ylabel("Portfolio Value")
     mc_path = os.path.join("static", "monte_carlo.png")
-    plt.savefig(mc_path)
+    os.makedirs(os.path.dirname(mc_path), exist_ok=True)
+
+    plt.savefig(mc_path, bbox_inches="tight", dpi=120)
     plt.close()
     value_2008 = market_crash(current_value)
     value_covid = covid_crash(current_value)
